@@ -5,7 +5,9 @@ import seaborn as sns
 import matplotlib
 import re
 
-matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'Microsoft YaHei']
+matplotlib.rcParams['font.sans-serif'] = [
+    'IPAexGothic', 'Noto Sans CJK JP', 'Yu Gothic', 'MS Gothic', 'SimHei', 'Arial Unicode MS', 'Microsoft YaHei'
+]
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 st.set_page_config(page_title="Bangumi アニメデータ分析", layout="wide")
@@ -44,9 +46,64 @@ present_topic_tags = [t for t in topic_tags if any(df['tags'].str.contains(t))]
 tag_options = ['全部'] + present_topic_tags
 tag_name = st.sidebar.selectbox("ジャンル・テーマを選択", tag_options)
 
+# 中日标签对照表
+jp2cn_tag_map = {
+    "ファンタジー": "奇幻",
+    "コメディ": "搞笑",
+    "バトル": "战斗",
+    "日常": "日常",
+    "癒し": "治愈",
+    "恋愛": "恋爱",
+    "学園": "校园",
+    "熱血": "热血",
+    "SF": "科幻",
+    "百合": "百合",
+    "冒険": "冒险",
+    "ハーレム": "后宫",
+    "萌え": "萌",
+    "青春": "青春",
+    "異世界": "穿越",
+    "音楽": "音乐",
+    "サスペンス": "悬疑",
+    "子供向け": "童年",
+    "アイドル": "偶像",
+    "玄幻": "玄幻",
+    "ドラマ": "剧情",
+    "メカ": "机战",
+    "俺TUEEE": "龙傲天",
+    "エロ": "卖肉",
+    "ロボ": "萝卜",
+    "スポーツ": "运动",
+    "ロリ": "萝莉",
+    "女性向け": "女性向",
+    "競技": "竞技",
+    "アクション": "动作",
+    "グロ": "猎奇",
+    "歴史": "历史",
+    "魔法": "魔法",
+    "純愛": "纯爱",
+    "乙女向け": "乙女向",
+    "戦争": "战争",
+    "肉": "肉",
+    "励まし": "励志",
+    "魔法少女": "魔法少女",
+    "超能力": "超能力",
+    "感動": "催泪",
+    "武侠": "武侠",
+    "ツッコミ": "吐槽",
+    "エロアニメ": "肉番",
+    "BL": "耽美",
+    "萌系": "萌系"
+}
+
 df_show = df[(df['year'] >= year_range[0]) & (df['year'] <= year_range[1])]
 if tag_name != '全部':
-    df_show = df_show[df_show['tags'].str.contains(tag_name, case=False, na=False, regex=True)]
+    # 用中日对照表查找对应中文标签
+    cn_tag = jp2cn_tag_map.get(tag_name, None)
+    if cn_tag:
+        df_show = df_show[df_show['tags'].str.contains(cn_tag, case=False, na=False, regex=True)]
+    else:
+        df_show = df_show[df_show['tags'].str.contains(tag_name, case=False, na=False, regex=True)]
 
 if 'type' in df.columns:
     df = df[df['type'].astype(str).str.lower() != 'unknown']
@@ -101,41 +158,47 @@ st.dataframe(show_df)
 
 st.write("#### 評価分布")
 fig, ax = plt.subplots()
-sns.histplot(df_show['score'], bins=20, kde=True, ax=ax)
+sns.histplot(show_df['評価'], bins=20, kde=True, ax=ax)
 ax.set_xlabel('評価')
 ax.set_ylabel('件数')
 st.pyplot(fig)
 
+st.write("#### 年別平均評価推移（フィルタ結果のみ）")
+if show_df.shape[0] > 0:
+    # 只基于当前筛选结果的"評価"数据生成趋势图
+    if '年' in show_df.columns and '評価' in show_df.columns:
+        trend = show_df.groupby('年')['評価'].mean()
+        fig3, ax3 = plt.subplots()
+        trend.plot(marker='o', ax=ax3, label='平均評価')
+        ax3.set_title('年別平均評価推移（フィルタ結果のみ）')
+        ax3.set_xlabel('年')
+        ax3.set_ylabel('平均評価')
+        ax3.legend(loc='best')
+        st.pyplot(fig3)
+
 st.write("#### 高頻度ジャンル・テーマの年別平均評価推移")
 if tag_name == '全部':
     valid_top_tags = []
-    for t in present_topic_tags:
-        mask = show_df['タグ'].str.contains(t)
-        year_counts = show_df[mask].groupby('年').size()
-        if (year_counts >= 10).sum() >= 10:
-            valid_top_tags.append(t)
-    top_tags = valid_top_tags[:10]
+    if 'タグ' in show_df.columns:
+        for t in present_topic_tags:
+            mask = show_df['タグ'].str.contains(t)
+            year_counts = show_df[mask].groupby('年').size()
+            if (year_counts >= 10).sum() >= 10:
+                valid_top_tags.append(t)
+        top_tags = valid_top_tags[:10]
 
-    fig2, ax2 = plt.subplots(figsize=(12, 6))
-    for t in top_tags:
-        mask = show_df['タグ'].str.contains(t)
-        trend = show_df[mask].groupby('年')['評価'].mean()
-        if not trend.empty:
-            trend = trend.reindex(range(show_df['年'].min(), show_df['年'].max() + 1))
-            ax2.plot(trend.index, trend.values, marker='o', label=t, linewidth=2)
-    ax2.set_title("高頻度ジャンル・テーマの年別平均評価推移")
-    ax2.set_xlabel('年')
-    ax2.set_ylabel('平均評価')
-    ax2.legend(loc='best')
-    st.pyplot(fig2)
-else:
-    trend = show_df[show_df['タグ'].str.contains(tag_name)].groupby('年')['評価'].mean()
-    fig2, ax2 = plt.subplots()
-    trend.plot(marker='o', ax=ax2)
-    ax2.set_title(f"{tag_name} 年別平均評価推移")
-    ax2.set_xlabel('年')
-    ax2.set_ylabel('平均評価')
-    st.pyplot(fig2)
+        fig2, ax2 = plt.subplots(figsize=(12, 6))
+        for t in top_tags:
+            mask = show_df['タグ'].str.contains(t)
+            trend = show_df[mask].groupby('年')['評価'].mean()
+            if not trend.empty:
+                trend = trend.reindex(range(show_df['年'].min(), show_df['年'].max() + 1))
+                ax2.plot(trend.index, trend.values, marker='o', label=t, linewidth=2)
+        ax2.set_title("高頻度ジャンル・テーマの年別平均評価推移")
+        ax2.set_xlabel('年')
+        ax2.set_ylabel('平均評価')
+        ax2.legend(loc='best', title="ジャンル")
+        st.pyplot(fig2)
 
 # 6. 拡張可能：中日比較など
 # st.write("#### さらに多くの分析機能を追加できます！") 
