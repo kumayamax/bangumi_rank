@@ -4,10 +4,17 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib
 import re
+import matplotlib.font_manager as fm
+import os
 
-matplotlib.rcParams['font.sans-serif'] = [
-    'IPAexGothic', 'Noto Sans CJK JP', 'Yu Gothic', 'MS Gothic', 'SimHei', 'Arial Unicode MS', 'Microsoft YaHei'
-]
+font_path = os.path.join(os.path.dirname(__file__), 'fonts', 'NotoSansJP-Regular.otf')
+if os.path.exists(font_path):
+    fm.fontManager.addfont(font_path)
+    matplotlib.rcParams['font.sans-serif'] = ['Noto Sans JP']
+else:
+    matplotlib.rcParams['font.sans-serif'] = [
+        'IPAexGothic', 'Noto Sans CJK JP', 'Yu Gothic', 'MS Gothic', 'SimHei', 'Arial Unicode MS', 'Microsoft YaHei'
+    ]
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 st.set_page_config(page_title="Bangumi アニメデータ分析", layout="wide")
@@ -155,7 +162,7 @@ for col in ['type', 'type_unknown', 'tags']:
     if col in show_df.columns:
         show_df = show_df.drop(columns=[col])
 # st.dataframe(show_df)
-st.table(show_df)
+st.dataframe(show_df)
 
 st.write("#### 評価分布")
 fig, ax = plt.subplots()
