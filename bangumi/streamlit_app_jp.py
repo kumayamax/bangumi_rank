@@ -7,7 +7,7 @@ import re
 import matplotlib.font_manager as fm
 import os
 
-font_path = os.path.join(os.path.dirname(__file__), 'fonts', 'NotoSansJP-Regular.otf')
+font_path = os.path.join(os.path.dirname(__file__), 'fonts', 'NotoSansJP-Regular.ttf')
 if os.path.exists(font_path):
     fm.fontManager.addfont(font_path)
     matplotlib.rcParams['font.sans-serif'] = ['Noto Sans JP']
