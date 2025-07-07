@@ -154,7 +154,8 @@ if 'ランキング' in show_df.columns:
 for col in ['type', 'type_unknown', 'tags']:
     if col in show_df.columns:
         show_df = show_df.drop(columns=[col])
-st.dataframe(show_df)
+# st.dataframe(show_df)
+st.table(show_df)
 
 st.write("#### 評価分布")
 fig, ax = plt.subplots()
